@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Restaurant Management Portal</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="app.js" defer></script>
+</head>
+<body>
+
+    <div id="loading-overlay" class="loading-overlay" style="display: none;">
+        <div class="spinner"></div>
+    </div>
+
+    <div id="app-container">
+        <nav id="navbar">
+            <div class="nav-brand">
+                <h1>🍽️ Restaurant Portal</h1>
+            </div>
+            <div id="nav-links">
+                </div>
+        </nav>
+
+        <main id="main-content">
+
+            <div id="login-page" class="page">
+                <div class="form-container">
+                    <h2>Login</h2>
+                    <form id="login-form">
+                        <div class="form-group">
+                            <label for="login-email">Email</label>
+                            <input type="email" id="login-email" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="login-password">Password</label>
+                            <input type="password" id="login-password" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Login</button>
+                    </form>
+                    <p class="form-switch">Don't have an account? <a href="#" id="show-register-link">Register</a></p>
+                </div>
+            </div>
+
+            <div id="register-page" class="page">
+                <div class="form-container">
+                    <h2>Create Your Restaurant Account</h2>
+                    <form id="register-form">
+                        <div class="form-group">
+                            <label for="reg-name">Restaurant Name</label>
+                            <input type="text" id="reg-name" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="reg-email">Email</label>
+                            <input type="email" id="reg-email" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="reg-password">Password (min 8 chars)</label>
+                            <input type="password" id="reg-password" required minlength="8">
+                        </div>
+                        <div class="form-group">
+                            <label for="reg-location">Location</label>
+                            <input type="text" id="reg-location" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="reg-phone">Phone (min 11 chars)</label>
+                            <input type="tel" id="reg-phone" required minlength="11">
+                        </div>
+                        <div class="form-group">
+                            <label for="reg-commercial">Commercial Number</label>
+                            <input type="number" id="reg-commercial" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Register</button>
+                    </form>
+                    <p class="form-switch">Already have an account? <a href="#" id="show-login-link">Login</a></p>
+                </div>
+            </div>
+
+            <div id="management-page" class="page">
+                <h2 id="welcome-message">Welcome!</h2>
+                <div class="form-container">
+                    <h3>Update Your Profile</h3>
+                    <form id="management-form">
+                        <div class="form-group">
+                            <label for="mgmt-name">Restaurant Name</label>
+                            <input type="text" id="mgmt-name">
+                        </div>
+                        <div class="form-group">
+                            <label for="mgmt-email">Email</label>
+                            <input type="email" id="mgmt-email">
+                        </div>
+                        <div class="form-group">
+                            <label for="mgmt-location">Location</label>
+                            <input type="text" id="mgmt-location">
+                        </div>
+                        <div class="form-group">
+                            <label for="mgmt-phone">Phone</label>
+                            <input type="tel" id="mgmt-phone" minlength="11">
+                        </div>
+                        <div class="form-group">
+                            <label for="mgmt-commercial">Commercial Number</label>
+                            <input type="number" id="mgmt-commercial">
+                        </div>
+                        <div class="form-group">
+                            <label for="mgmt-password">New Password (optional)</label>
+                            <input type="password" id="mgmt-password" minlength="8" placeholder="Leave blank to keep current password">
+                        </div>
+                        <button type="submit" class="btn btn-primary">Save Changes</button>
+                    </form>
+                    <hr>
+                    <button id="delete-account-btn" class="btn btn-danger">Delete This Account</button>
+                </div>
+            </div>
+
+            <div id="all-restaurants-page" class="page">
+                <h2>All Restaurants</h2>
+                <div id="restaurant-list" class="restaurant-grid">
+                    </div>
+            </div>
+
+        </main>
+    </div>
+
+    <div id="toast-container"></div>
+
+</body>
+</html>
