@@ -1,0 +1,12 @@
+for k8s
+
+there is 3 nodes 
+    2 worker 
+    1 master 
+
+1 worker "sched-demo-m02"
+Taints:             fe-worker=fe-worker:NoSchedule
+
+2 worker "sched-demo-m03"
+Taints:             be-worker=be-worker:NoSchedule
+
