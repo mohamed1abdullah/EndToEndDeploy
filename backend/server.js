@@ -31,14 +31,12 @@ app.use(mongoSanitize({
   },
 }));
 
-
-// --- REMOVED STATIC FILE SERVING ---
-// app.use(express.static(path.join(__dirname, 'views')));
-// app.use('/css', express.static(path.join(__dirname, 'views/css')));
-// app.use('/js', express.static(path.join(__dirname, 'views/js')));
+const { MONGO_HOST, MONGO_DB, MONGODB_URI } = process.env;
 
 // --- Database Connection ---
-const uri = process.env.MONGODB_URI || "mongodb://localhost:27017/res";
+// const uri = process.env.MONGODB_URI || "mongodb://localhost:27017/res";
+const uri = MONGODB_URI || `mongodb://${MONGO_HOST}:27017/${MONGO_DB}`;
+
 mongoose.connect(uri).then(() => {
     console.log("✅ [API] Successfully connected to MongoDB");
 });

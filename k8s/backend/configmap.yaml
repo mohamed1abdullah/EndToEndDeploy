@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: env-be
+  namespace: be-ns
+data:
+  MONGODB_URI: "mongodb://db-service:27017/res"
+  MONGO_HOST: mongodb-service
+  MONGO_DB: res
