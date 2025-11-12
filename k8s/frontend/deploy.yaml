@@ -1,0 +1,27 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fe-deployment
+  namespace: fe-ns
+  labels:
+    app: fe
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: fe
+  template:
+    metadata:
+      labels:
+        app: fe
+    spec:
+      containers:
+      - name: profile-fe
+        image: docker.io/mohamed010/frontend-login
+        ports:
+        - containerPort: 80
+      tolerations:
+      - key: "fe-worker"
+        operator: "Equal"
+        value: "fe-worker"
+        effect: "NoSchedule"

@@ -1,0 +1,31 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: be-deployment
+  namespace: be-ns
+  labels:
+    app: be
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: be
+  template:
+    metadata:
+      labels:
+        app: be
+    spec:
+      containers:
+      - name: profile-be
+        image: docker.io/mohamed010/backend-login
+        ports:
+        - containerPort: 3001
+          # readOnly: true
+        envFrom:
+          - configMapRef:
+              name: env-be
+      tolerations:
+      - key: "be-worker"
+        operator: "Equal"
+        value: "be-worker"
+        effect: "NoSchedule"

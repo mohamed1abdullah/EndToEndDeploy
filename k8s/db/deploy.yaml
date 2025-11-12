@@ -1,0 +1,33 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: db-deployment
+  namespace: be-ns
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mongodb
+  template:
+    metadata:
+      labels:
+        app: mongodb
+    spec:
+      containers:
+        - name: mongodb
+          image: mongo:latest
+          ports:
+            - containerPort: 27017
+          env:
+          volumeMounts:
+          - mountPath: "/data/db"
+            name: pv-storage
+      volumes:
+        - name: pv-storage
+          persistentVolumeClaim:
+            claimName: mongo-pvc
+      tolerations:
+      - key: "be-worker"
+        operator: "Equal"
+        value: "be-worker"
+        effect: "NoSchedule"
