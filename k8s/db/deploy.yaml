@@ -20,7 +20,7 @@ spec:
             - containerPort: 27017
           env:
           volumeMounts:
-          - mountPath: "/db"
+          - mountPath: "/data/db"
             name: pv-storage
       volumes:
         - name: pv-storage
