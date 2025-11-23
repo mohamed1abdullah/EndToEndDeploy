@@ -40,6 +40,6 @@ jobs:
       - name: Build and push frontend image
         uses: docker/build-push-action@v4
         with:
-          context: ./frontend
+          context: ./application/frontend
           push: true
           tags: mohamed010/restaurant-frontend:latest
