@@ -54,8 +54,8 @@ spec:
     spec:
       containers:
       - name: backend
-        image: my-backend:v1
-        imagePullPolicy: Never
+        image: mohamed010/restaurant-backend:latest
+        imagePullPolicy: Always
         ports:
         - containerPort: 3001
         env:
@@ -97,8 +97,8 @@ spec:
     spec:
       containers:
       - name: frontend
-        image: my-frontend:v1
-        imagePullPolicy: Never
+        image: mohamed010/restaurant-frontend:latest
+        imagePullPolicy: Always
         ports:
         - containerPort: 80
 ---
