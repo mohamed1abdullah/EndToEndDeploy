@@ -1,7 +1,7 @@
 document.addEventListener('DOMContentLoaded', () => {
 
     // --- CONFIG ---
-    const API_BASE_URL = 'http://localhost:3001'; // From your server.js
+    const API_BASE_URL = 'http://44.197.208.101:3001'; // From your server.js
 
     // --- STATE ---
     let appState = {
@@ -494,4 +494,5 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     init();
+
 });
