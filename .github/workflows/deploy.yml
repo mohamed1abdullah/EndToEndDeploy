@@ -1,167 +1,172 @@
-
-name: Build and Deploy
+name: CI/CD - Build, Push, and Deploy to EC2
 
 on:
   push:
     branches: [ "main" ]
 
 jobs:
+  # --- JOB 1: BUILD & PUSH ---
   build-and-push:
     runs-on: ubuntu-latest
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v3
+      - name: Checkout Code
+        uses: actions/checkout@v4
 
-    - name: Login to Docker Hub
-      uses: docker/login-action@v2
-      with:
-        username: ${{ secrets.DOCKER_NAME }}
-        password: ${{ secrets.DOCKER_TOKEN }}
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
 
-    - name: Build and push backend
-      uses: docker/build-push-action@v4
-      with:
-        context: ./backend
-        push: true
-        tags: mohamed010/restaurant-backend:latest
+      - name: Build and Push Backend
+        uses: docker/build-push-action@v5
+        with:
+          context: ./backend
+          file: ./backend/Dockerfile
+          push: true
+          tags: mohamed010/restaurant-backend:latest
 
-    - name: Build and push frontend
-      uses: docker/build-push-action@v4
-      with:
-        context: ./frontend
-        push: true
-        tags: mohamed010/restaurant-frontend:latest
+      - name: Build and Push Frontend
+        uses: docker/build-push-action@v5
+        with:
+          context: ./frontend
+          file: ./frontend/Dockerfile
+          push: true
+          tags: mohamed010/restaurant-frontend:latest
 
+  # --- JOB 2: DEPLOY TO EC2 ---
   deploy:
-    runs-on: ubuntu-latest
     needs: build-and-push
+    runs-on: ubuntu-latest
     steps:
-    - name: Deploy to EC2
-      uses: appleboy/ssh-action@master
-      with:
-        host: ${{ secrets.EC2_HOST }}
-        username: ${{ secrets.EC2_USER }}
-        key: ${{ secrets.EC2_SSH_KEY }}
-        script: |
-          mkdir -p ~/app
-          cat <<EOF > ~/app/k8s-deployment.yaml
-# -------------------
-# 1. MONGODB DATABASE
-# -------------------
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: mongo
-spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      app: mongo
-  template:
-    metadata:
-      labels:
-        app: mongo
-    spec:
-      containers:
-      - name: mongo
-        image: mongo:latest
-        imagePullPolicy: IfNotPresent 
-        ports:
-        - containerPort: 27017
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: mongo-service
-spec:
-  selector:
-    app: mongo
-  ports:
-    - protocol: TCP
-      port: 27017
-      targetPort: 27017
-
----
-# -------------------
-# 2. BACKEND API
-# -------------------
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: backend
-spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      app: backend
-  template:
-    metadata:
-      labels:
-        app: backend
-    spec:
-      containers:
-      - name: backend
-        image: mohamed010/restaurant-backend:latest
-        imagePullPolicy: Always
-        ports:
-        - containerPort: 3001
-        env:
-        - name: MONGODB_URI
-          value: "mongodb://mongo-service:27017/restaurant_db"
-        - name: JWT_SECRET
-          value: "super_secret_key_change_me"
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: backend-service
-spec:
-  type: LoadBalancer
-  selector:
-    app: backend
-  ports:
-    - protocol: TCP
-      port: 3001
-      targetPort: 3001
-
----
-# -------------------
-# 3. FRONTEND UI (UPDATED PORT)
-# -------------------
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: frontend
-spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      app: frontend
-  template:
-    metadata:
-      labels:
-        app: frontend
-    spec:
-      containers:
-      - name: frontend
-        image: mohamed010/restaurant-frontend:latest
-        imagePullPolicy: Always
-        ports:
-        - containerPort: 80
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: frontend-service
-spec:
-  type: LoadBalancer
-  selector:
-    app: frontend
-  ports:
-    - protocol: TCP
-      port: 8081          # <--- CHANGED TO 8081 TO AVOID JENKINS
-      targetPort: 80
-EOF
-          sudo k3s kubectl apply -f ~/app/k8s-deployment.yaml
-          sudo k3s kubectl rollout restart deployment/backend
-          sudo k3s kubectl rollout restart deployment/frontend
+      - name: Deploy to EC2 via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            mkdir -p ~/app
+            
+            # NOTICE: The lines below are indented! They must NOT touch the left edge.
+            cat <<EOF > ~/app/k8s-deployment.yaml
+            # -------------------
+            # 1. MONGODB DATABASE
+            # -------------------
+            apiVersion: apps/v1
+            kind: Deployment
+            metadata:
+              name: mongo
+            spec:
+              replicas: 1
+              selector:
+                matchLabels:
+                  app: mongo
+              template:
+                metadata:
+                  labels:
+                    app: mongo
+                spec:
+                  containers:
+                  - name: mongo
+                    image: mongo:latest
+                    imagePullPolicy: IfNotPresent 
+                    ports:
+                    - containerPort: 27017
+            ---
+            apiVersion: v1
+            kind: Service
+            metadata:
+              name: mongo-service
+            spec:
+              selector:
+                app: mongo
+              ports:
+                - protocol: TCP
+                  port: 27017
+                  targetPort: 27017
+            ---
+            # -------------------
+            # 2. BACKEND API
+            # -------------------
+            apiVersion: apps/v1
+            kind: Deployment
+            metadata:
+              name: backend
+            spec:
+              replicas: 1
+              selector:
+                matchLabels:
+                  app: backend
+              template:
+                metadata:
+                  labels:
+                    app: backend
+                spec:
+                  containers:
+                  - name: backend
+                    image: mohamed010/restaurant-backend:latest
+                    imagePullPolicy: Always
+                    ports:
+                    - containerPort: 3001
+                    env:
+                    - name: MONGODB_URI
+                      value: "mongodb://mongo-service:27017/restaurant_db"
+                    - name: JWT_SECRET
+                      value: "super_secret_key_change_me"
+            ---
+            apiVersion: v1
+            kind: Service
+            metadata:
+              name: backend-service
+            spec:
+              type: LoadBalancer
+              selector:
+                app: backend
+              ports:
+                - protocol: TCP
+                  port: 3001
+                  targetPort: 3001
+            ---
+            # -------------------
+            # 3. FRONTEND UI
+            # -------------------
+            apiVersion: apps/v1
+            kind: Deployment
+            metadata:
+              name: frontend
+            spec:
+              replicas: 1
+              selector:
+                matchLabels:
+                  app: frontend
+              template:
+                metadata:
+                  labels:
+                    app: frontend
+                spec:
+                  containers:
+                  - name: frontend
+                    image: mohamed010/restaurant-frontend:latest
+                    imagePullPolicy: Always
+                    ports:
+                    - containerPort: 80
+            ---
+            apiVersion: v1
+            kind: Service
+            metadata:
+              name: frontend-service
+            spec:
+              type: LoadBalancer
+              selector:
+                app: frontend
+              ports:
+                - protocol: TCP
+                  port: 8081
+                  targetPort: 80
+            EOF
+            
+            # Apply and Restart
+            sudo k3s kubectl apply -f ~/app/k8s-deployment.yaml
+            sudo k3s kubectl rollout restart deployment/backend
+            sudo k3s kubectl rollout restart deployment/frontend
