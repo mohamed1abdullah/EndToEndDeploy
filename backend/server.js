@@ -38,7 +38,7 @@ app.use(mongoSanitize({
 // app.use('/js', express.static(path.join(__dirname, 'views/js')));
 
 // --- Database Connection ---
-const uri = process.env.MONGODB_URI || "mongodb://localhost:27017/res";
+const uri = process.env.MONGODB_URI || "mongodb://172.17.0.3:27017/res";
 mongoose.connect(uri).then(() => {
     console.log("✅ [API] Successfully connected to MongoDB");
 });
