@@ -64,7 +64,9 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
             # Apply the file we just copied
-            sudo k3s kubectl apply -f ~/app/k8s-deployment.yaml
+            sudo k3s kubectl apply -f ~/app/k8s/frontend
+            sudo k3s kubectl apply -f ~/app/k8s/backend
+            sudo k3s kubectl apply -f ~/app/k8s/db
             
             # Restart deployments to pull new images
             sudo k3s kubectl rollout restart deployment/backend
