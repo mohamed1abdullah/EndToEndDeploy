@@ -2,7 +2,7 @@ name: CI/CD - Build, Push, and Deploy to EC2
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "test" ]
 
 jobs:
   # --- JOB 1: BUILD & PUSH ---
