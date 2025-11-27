@@ -21,22 +21,42 @@ The system utilizes a microservices-based architecture hosted on a single AWS EC
 
 ```mermaid
 graph TD
-    User[Web Browser] -->|HTTP:8081| LB_FE[K8s Service: frontend-service]
-    LB_FE --> Pod_FE[Frontend Pod (Nginx)]
+    %% Define nodes first (fixes GitHub strict parsing issues)
+    User[Web Browser]
+    LB_FE[K8s Service: frontend-service]
+    Pod_FE["Frontend Pod (Nginx)"]
     
-    Pod_FE -->|API Calls HTTP:3001| LB_BE[K8s Service: backend-service]
-    LB_BE --> Pod_BE[Backend Pod (Node/Express)]
+    LB_BE[K8s Service: backend-service]
+    Pod_BE["Backend Pod (Node/Express)"]
     
-    Pod_BE -->|TCP:27017| Svc_DB[K8s Service: mongo-service]
-    Svc_DB --> Pod_DB[MongoDB Pod]
-    
-    Pod_DB --> PVC[PVC: mongo-pvc]
-    PVC --> PV[PV: mongo-pv (HostPath)]
-    
-    subgraph "Monitoring (Docker Compose)"
+    Svc_DB[K8s Service: mongo-service]
+    Pod_DB[MongoDB Pod]
+    PVC["PVC: mongo-pvc"]
+    PV["PV: mongo-pv (HostPath)"]
+
+    Prometheus
+    NodeExporter
+    Grafana
+
+    %% Main flow
+    User -->|HTTP:8081| LB_FE
+    LB_FE --> Pod_FE
+
+    Pod_FE -->|API Calls HTTP:3001| LB_BE
+    LB_BE --> Pod_BE
+
+    Pod_BE -->|TCP:27017| Svc_DB
+    Svc_DB --> Pod_DB
+
+    Pod_DB --> PVC
+    PVC --> PV
+
+    %% Monitoring section
+    subgraph Monitoring ["Monitoring (Docker Compose)"]
         Prometheus -->|Scrape| NodeExporter
         Grafana -->|Query| Prometheus
     end
+
 ````
 
 ### 2.2 Network Layout
