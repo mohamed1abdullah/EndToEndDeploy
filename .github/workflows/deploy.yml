@@ -44,7 +44,7 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      # STEP 1: Copy the Kubernetes file to the server
+      # STEP 1: Copy the Kubernetes dir to the server
       - name: Copy K8s file to EC2
         uses: appleboy/scp-action@v0.1.7
         with:
@@ -55,7 +55,18 @@ jobs:
           target: "~/app"
           strip_components: 1
 
-      # STEP 2: Apply changes on the server
+      # STEP 2: Copy the monitoring dir to the server
+      - name: Copy Monitoring dir to EC2
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          source: "application/monitoring"
+          target: "~/app"
+          strip_components: 1
+
+      # STEP 3: Apply changes on the server
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1.0.3
         with:
@@ -71,3 +82,6 @@ jobs:
             # Restart deployments to pull new images
             sudo k3s kubectl rollout restart deployment/backend
             sudo k3s kubectl rollout restart deployment/frontend
+            
+            # Create monitoring
+            sudo docker compose -f ~/app/monitoring/docker-compose.yml up -d
