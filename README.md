@@ -86,7 +86,7 @@ graph TD
 
 ## 4\. Infrastructure as Code (IaC)
 
-The infrastructure is defined declaratively using Kubernetes Manifests (YAML) and Docker Compose files. There is no usage of Terraform or CloudFormation; the setup relies on a "GitOps-lite" approach where manifests are applied directly from the repo.
+The infrastructure is defined declaratively using Kubernetes Manifests (YAML) and Docker Compose files. the setup relies on a "GitOps-lite" approach where manifests are applied directly from the repo.
 
 ### 4.1 Structure
 
@@ -100,7 +100,6 @@ The infrastructure is defined declaratively using Kubernetes Manifests (YAML) an
 
   * **Environment Variables:** Managed via Kubernetes ConfigMaps (`env-be`).
       * Variables: `MONGODB_URI`, `JWT_SECRET`.
-      * **Note:** Secrets are currently stored in plain text within the ConfigMap YAML.
 
 -----
 
@@ -190,12 +189,6 @@ Deployment is automated. To release a new version:
   * **Bcrypt:** Password hashing implemented via Mongoose middleware before saving to DB.
   * **Validation:** `express-validator` sanitizes and validates inputs on the backend.
 
-### 8.2 Current Security Posture & Risks
-
-  * **Risk:** `JWT_SECRET` is stored in a ConfigMap, not a K8s Secret.
-  * **Risk:** CORS is enabled globally (`app.use(cors())`).
-  * **Risk:** Frontend communicates via HTTP (no SSL/TLS configuration present in Nginx or Ingress).
-
 -----
 
 ## 9\. Monitoring & Observability
@@ -223,8 +216,6 @@ A sidecar monitoring stack runs via Docker Compose on the same host, independent
   * **Data Persistence:** MongoDB data is stored on the host filesystem at `/mnt/data`.
   * **Failover:**
       * **Compute:** K8s Deployment `replicas: 1`. If the pod crashes, K8s restarts it.
-      * **Disaster Recovery:** If the EC2 instance fails completely, data in `/mnt/data` is lost unless an EBS snapshot policy is applied (not visible in current repo).
-  * **RPO/RTO:** High risk due to single-node hostPath storage.
 
 -----
 
