@@ -52,7 +52,7 @@ graph TD
     PVC --> PV
 
     %% Monitoring section
-    subgraph Monitoring ["Monitoring (Docker Compose)"]
+    subgraph Monitoring ["Monitoring (Docker)"]
         Prometheus -->|Scrape| NodeExporter
         Grafana -->|Query| Prometheus
     end
