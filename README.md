@@ -242,8 +242,7 @@ A sidecar monitoring stack runs via Docker Compose on the same host, independent
 EndToEndDeploy-main/
 ├── .github/
 │   └── workflows/
-│       ├── deploy.yml         # Main CI/CD Pipeline
-│       └── docker-publish.yml
+│       └── deploy.yml         # Main CI/CD Pipeline
 ├── application/
 │   ├── backend/               # Node.js API
 │   │   ├── controllers/
