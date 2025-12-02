@@ -1,13 +1,8 @@
-FROM node:18-alpine
+# Use a lightweight web server
+FROM nginx:alpine
 
-WORKDIR /usr/src/app
+# Copy the static files to the web server's root directory
+COPY . /usr/share/nginx/html
 
-COPY package*.json ./
-
-RUN npm install
-
-COPY . .
-
-EXPOSE 3001
-
-CMD [ "npm", "start" ]
+# Expose port 80 to the outside world
+EXPOSE 80
