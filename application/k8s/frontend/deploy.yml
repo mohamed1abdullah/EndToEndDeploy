@@ -17,4 +17,4 @@ spec:
         image: mohamed010/restaurant-frontend:latest
         imagePullPolicy: Always
         ports:
-        - containerPort: 80
+        - containerPort: 8080
