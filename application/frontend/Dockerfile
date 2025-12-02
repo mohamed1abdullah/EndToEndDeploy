@@ -4,5 +4,6 @@ FROM nginx:alpine
 # Copy the static files to the web server's root directory
 COPY . /usr/share/nginx/html
 
+USER nginx
 # Expose port 80 to the outside world
 EXPOSE 80
