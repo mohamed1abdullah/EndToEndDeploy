@@ -16,5 +16,7 @@ spec:
       - name: frontend
         image: mohamed010/restaurant-frontend:latest
         imagePullPolicy: Always
+        securityContext:       # <--- ADD THIS
+          runAsUser: 0         # <--- ADD THIS
         ports:
         - containerPort: 8080
