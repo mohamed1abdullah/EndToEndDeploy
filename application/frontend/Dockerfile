@@ -1,8 +1,16 @@
-# Use a lightweight web server
 FROM nginx:alpine
 
-# Copy the static files to the web server's root directory
+# Create non-root user
+RUN adduser -D -g '' appuser
+
+# Copy static files
 COPY . /usr/share/nginx/html
 
-# Expose port 80 to the outside world
+# Fix permissions
+RUN chown -R appuser:appuser /usr/share/nginx/html
+
+# Run as non-root user
+USER appuser
+
 EXPOSE 80
+CMD ["nginx", "-g", "daemon off;"]
