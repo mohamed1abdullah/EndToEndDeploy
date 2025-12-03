@@ -2,6 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: backend
+  namespace: be-ns
 spec:
   replicas: 1
   selector:
@@ -19,5 +20,10 @@ spec:
         ports:
         - containerPort: 3001
         envFrom:
-          - configMapRef:
+          - secretRef:
               name: env-be
+      tolerations:
+      - key: "be-worker"
+        operator: "Equal"
+        value: "be-worker"
+        effect: "NoSchedule"

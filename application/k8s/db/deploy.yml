@@ -2,6 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: mongo
+  namespace: be-ns
 spec:
   replicas: 1
   selector:
@@ -26,3 +27,8 @@ spec:
         - name: pv-storage
           persistentVolumeClaim:
             claimName: mongo-pvc
+      tolerations:
+      - key: "be-worker"
+        operator: "Equal"
+        value: "be-worker"
+        effect: "NoSchedule"

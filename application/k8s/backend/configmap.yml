@@ -1,7 +1,8 @@
 apiVersion: v1
-kind: ConfigMap
+kind: Secret
 metadata:
   name: env-be
+  namespace: be-ns
 data:
-  MONGODB_URI: "mongodb://mongo-service:27017/restaurant_db"
-  JWT_SECRET: "super_secret" 
+  MONGODB_URI: bW9uZ29kYjovL21vbmdvLXNlcnZpY2U6MjcwMTcvcmVzdGF1cmFudF9kYg==
+  JWT_SECRET: c3VwZXJfc2VjcmV0 
