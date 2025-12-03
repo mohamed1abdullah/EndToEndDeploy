@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
       - name: frontend
-        image: mohamed010/restaurant-frontend:latest
+        image: docker.io/mohamed010/frontend-login
         imagePullPolicy: Always
         ports:
         - containerPort: 8080
