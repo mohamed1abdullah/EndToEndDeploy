@@ -1,11 +1,7 @@
 document.addEventListener('DOMContentLoaded', () => {
 
     // --- CONFIG ---
-<<<<<<< HEAD
-    const API_BASE_URL = "http://a3628cb55b57c46feb15694a944ff351-1607879869.us-east-1.elb.amazonaws.com:3001";
-=======
     const API_BASE_URL = "http://13.223.247.185:3001";
->>>>>>> test
 
     // --- STATE ---
     let appState = {
