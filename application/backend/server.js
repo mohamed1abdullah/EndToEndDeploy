@@ -1,56 +1,33 @@
 const express = require('express');
-const mongoose = require('mongoose');
-const mongoSanitize = require('express-mongo-sanitize');
 const morgan = require('morgan');
-const cors = require('cors'); // <-- Will now be found
+const cors = require('cors');
+require("dotenv").config();
 
-// Route imports
-const restaurantRouter = require('./routes/restaurant.route');
-// const frontendRouter = require('./routes/frontend.route'); // <-- REMOVED
+// AWS DynamoDB
+const { DynamoDBClient } = require("@aws-sdk/client-dynamodb");
+const { DynamoDBDocumentClient } = require("@aws-sdk/lib-dynamodb");
 
-// Initialize app
+// --- Initialize app ---
 const app = express();
 
-// --- Middleware Setup ---
-
-// Enable CORS for all routes so your future frontend can make requests
+// --- Middleware ---
 app.use(cors());
-
-// Use morgan for detailed request logging
 app.use(morgan('dev'));
-
-// Body parser to make `req.body` available
 app.use(express.json());
 
-// Sanitize data after parsing
-app.use(mongoSanitize({
-  // This option is needed for compatibility with newer Express versions
-  // Although we downgraded, it's good practice to keep it.
-  onSanitize: ({ req, key }) => {
-    console.warn(`[Sanitize] This request[${key}] is sanitized`, req);
-  },
-}));
-
-
-// --- REMOVED STATIC FILE SERVING ---
-// app.use(express.static(path.join(__dirname, 'views')));
-// app.use('/css', express.static(path.join(__dirname, 'views/css')));
-// app.use('/js', express.static(path.join(__dirname, 'views/js')));
-
-// --- Database Connection ---
-const uri = process.env.MONGODB_URI || "mongodb://172.17.0.3:27017/res";
-mongoose.connect(uri).then(() => {
-    console.log("✅ [API] Successfully connected to MongoDB");
+// --- DynamoDB Client ---
+const ddbClient = new DynamoDBClient({
+  region: process.env.AWS_REGION || "us-east-1",
 });
 
-// --- API Routes ---
+global.db = DynamoDBDocumentClient.from(ddbClient);
+
+// --- Routes ---
+const restaurantRouter = require('./routes/restaurant.route');
 app.use("/restaurants", restaurantRouter);
-// app.use('/', frontendRouter); // <-- REMOVED
 
 // --- Start Server ---
-// We'll run the backend on port 3001 to prepare for a separate frontend later.
 const PORT = 3001;
 app.listen(PORT, () => {
-    console.log(`🚀 [API] Server is running on http://localhost:${PORT}/`);
+  console.log(`🚀 Server running on http://localhost:${PORT}`);
 });
-

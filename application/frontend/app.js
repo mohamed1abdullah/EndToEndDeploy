@@ -1,7 +1,8 @@
 document.addEventListener('DOMContentLoaded', () => {
 
     // --- CONFIG ---
-    const API_BASE_URL = "http://backend.be-ns.svc.cluster.local:3001";
+    // const API_BASE_URL = "http://backend.be-ns.svc.cluster.local:3001";
+    const API_BASE_URL = "http://3.89.194.167:80";
 
     // --- STATE ---
     let appState = {

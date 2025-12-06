@@ -1,10 +1,8 @@
 apiVersion: apps/v1
-kind: Deployment
+kind: DaemonSet
 metadata:
   name: frontend
-  namespace: fe-ns
 spec:
-  replicas: 1
   selector:
     matchLabels:
       app: frontend
@@ -15,12 +13,9 @@ spec:
     spec:
       containers:
       - name: frontend
-        image: docker.io/mohamed010/frontend-login
+        image: mohamed010/frontend-login
         imagePullPolicy: Always
+        securityContext:
+          runAsUser: 0
         ports:
         - containerPort: 8080
-      tolerations:
-      - key: "fe-worker"
-        operator: "Equal"
-        value: "fe-worker"
-        effect: "NoSchedule"

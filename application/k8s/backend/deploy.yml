@@ -1,10 +1,8 @@
 apiVersion: apps/v1
-kind: Deployment
+kind: DaemonSet
 metadata:
   name: backend
-  namespace: be-ns
 spec:
-  replicas: 1
   selector:
     matchLabels:
       app: backend
@@ -22,8 +20,3 @@ spec:
         envFrom:
           - secretRef:
               name: env-be
-      tolerations:
-      - key: "be-worker"
-        operator: "Equal"
-        value: "be-worker"
-        effect: "NoSchedule"
