@@ -6,6 +6,8 @@ resource "aws_instance" "control_plane" {
   vpc_security_group_ids      = [aws_security_group.private_sg.id]
   associate_public_ip_address = false
 
+  key_name = aws_key_pair.ssh_key_pair.key_name
+
   tags = {
     Name = "control-plane"
   }
@@ -17,6 +19,8 @@ resource "aws_instance" "worker" {
   subnet_id                   = aws_subnet.subnet1.id
   vpc_security_group_ids      = [aws_security_group.private_sg.id]
   associate_public_ip_address = false
+
+  key_name = aws_key_pair.ssh_key_pair.key_name
 
   tags = {
     Name = "worker"
@@ -36,6 +40,8 @@ resource "aws_instance" "fe_lb" {
 
   associate_public_ip_address = false
 
+  key_name = aws_key_pair.ssh_key_pair.key_name
+
   tags = {
     Name = "fe-lb"
   }
@@ -54,6 +60,8 @@ resource "aws_instance" "be_lb" {
  
   associate_public_ip_address = false
 
+  key_name = aws_key_pair.ssh_key_pair.key_name
+
   tags = {
     Name = "be-lb"
   }
@@ -66,6 +74,8 @@ resource "aws_instance" "monitoring" {
   subnet_id                   = aws_subnet.subnet1.id
   vpc_security_group_ids = [aws_security_group.public_sg.id]
   associate_public_ip_address = true
+
+  key_name = aws_key_pair.ssh_key_pair.key_name
 
   tags = {
     Name = "monitoring"
