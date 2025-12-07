@@ -38,7 +38,7 @@ resource "aws_instance" "fe_lb" {
   subnet_id              = aws_subnet.subnet2.id
   vpc_security_group_ids = [aws_security_group.public_sg.id]
 
-  associate_public_ip_address = false
+  associate_public_ip_address = true
 
   key_name = aws_key_pair.ssh_key_pair.key_name
 
@@ -58,7 +58,7 @@ resource "aws_instance" "be_lb" {
   subnet_id              = aws_subnet.subnet2.id
   vpc_security_group_ids = [aws_security_group.public_sg.id]
  
-  associate_public_ip_address = false
+  associate_public_ip_address = true
 
   key_name = aws_key_pair.ssh_key_pair.key_name
 
