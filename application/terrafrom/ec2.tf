@@ -8,8 +8,6 @@ resource "aws_instance" "control_plane" {
 
   key_name = aws_key_pair.ssh_key_pair.key_name
 
-  iam_instance_profile        = aws_iam_instance_profile.ssm_profile.name
-
   tags = {
     Name = "control-plane"
   }
