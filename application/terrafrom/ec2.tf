@@ -17,7 +17,7 @@ resource "aws_instance" "control_plane" {
 #  worker ec2
 resource "aws_instance" "worker" {
   ami                         = var.ami
-  instance_type               = var.instance_type_t2_small
+  instance_type               = var.instance_type_t2_medium
   subnet_id                   = aws_subnet.subnet1.id
   vpc_security_group_ids      = [aws_security_group.private_sg.id]
   associate_public_ip_address = false
@@ -74,7 +74,7 @@ resource "aws_instance" "monitoring" {
   ami                         = var.ami
   instance_type               = var.instance_type_t2_medium
   subnet_id                   = aws_subnet.subnet2.id
-  vpc_security_group_ids = [aws_security_group.public_sg.id]
+  vpc_security_group_ids = [aws_security_group.monitoring_sg.id]
   associate_public_ip_address = true
 
   key_name = aws_key_pair.ssh_key_pair.key_name
