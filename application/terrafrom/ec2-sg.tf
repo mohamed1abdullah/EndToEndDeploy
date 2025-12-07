@@ -3,6 +3,34 @@ resource "aws_security_group" "private_sg" {
   vpc_id      = aws_vpc.restaurant_vpc.id
 
   ingress {
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
+    cidr_blocks = ["10.0.0.0/16"]
+  }
+
+  ingress {
+    from_port   = 179
+    to_port     = 179
+    protocol    = "tcp"
+    cidr_blocks = ["10.0.0.0/16"]
+  }
+
+  ingress {
+    from_port   = 10255
+    to_port     = 10255
+    protocol    = "tcp"
+    cidr_blocks = ["10.0.0.0/16"]
+  }
+
+  ingress {
+    from_port   = 10250
+    to_port     = 10250
+    protocol    = "tcp"
+    cidr_blocks = ["10.0.0.0/16"]
+  }
+
+  ingress {
     from_port   = 30001
     to_port     = 30001
     protocol    = "tcp"
