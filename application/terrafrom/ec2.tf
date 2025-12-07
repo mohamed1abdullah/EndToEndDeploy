@@ -8,6 +8,8 @@ resource "aws_instance" "control_plane" {
 
   key_name = aws_key_pair.ssh_key_pair.key_name
 
+  iam_instance_profile        = aws_iam_instance_profile.ssm_profile.name
+
   tags = {
     Name = "control-plane"
   }
@@ -71,7 +73,7 @@ resource "aws_instance" "be_lb" {
 resource "aws_instance" "monitoring" {
   ami                         = var.ami
   instance_type               = var.instance_type_t2_medium
-  subnet_id                   = aws_subnet.subnet1.id
+  subnet_id                   = aws_subnet.subnet2.id
   vpc_security_group_ids = [aws_security_group.public_sg.id]
   associate_public_ip_address = true
 
