@@ -2,7 +2,7 @@ name: CI/CD - Build and Refresh ASG
 
 on:
   push:
-    branches: [ "main", "feature/infrastructure-update" ] # Trigger on your branches
+    branches: [ "test", "main", "feature/infrastructure-update" ]
 
 permissions:
   id-token: write
@@ -18,14 +18,14 @@ jobs:
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_REGION }}
+          aws-region: "us-east-1"
+          # YOUR AWS KEYS (Already filled by you above)
+          aws-access-key-id: "AKIAV2PPLCQHHOMDHYTB"
+          aws-secret-access-key: "Jw6PgQDekZV+uVADeM5iHXrpTHXJE35cvC3LSSUn"
 
       - name: Get Load Balancer URL
         id: get_alb
         run: |
-          # Fetch the DNS name of the Load Balancer named 'restaurant-app-lb'
           ALB_DNS=$(aws elbv2 describe-load-balancers \
             --names restaurant-app-lb \
             --query "LoadBalancers[0].DNSName" \
@@ -44,8 +44,9 @@ jobs:
       - name: Log in to Docker Hub
         uses: docker/login-action@v3
         with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
+          # I filled in your username, but you MUST PASTE YOUR PASSWORD:
+          username: "mohamed010"
+          password: "PASTE_YOUR_DOCKER_PASSWORD_HERE"
 
       # 1. Inject the Load Balancer URL into the Frontend Code
       - name: Update Frontend API URL
@@ -60,7 +61,7 @@ jobs:
           context: EndToEndDeploy/application/backend
           file: EndToEndDeploy/application/backend/Dockerfile
           push: true
-          tags: ${{ secrets.DOCKER_USERNAME }}/restaurant-backend:latest
+          tags: mohamed010/restaurant-backend:latest
 
       # 3. Build Frontend
       - name: Build and Push Frontend
@@ -69,7 +70,7 @@ jobs:
           context: EndToEndDeploy/application/frontend
           file: EndToEndDeploy/application/frontend/Dockerfile
           push: true
-          tags: ${{ secrets.DOCKER_USERNAME }}/restaurant-frontend:latest
+          tags: mohamed010/restaurant-frontend:latest
 
   # --- JOB 3: DEPLOY (INSTANCE REFRESH) ---
   deploy-refresh:
@@ -79,14 +80,15 @@ jobs:
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_REGION }}
+          aws-region: "us-east-1"
+          # PASTE THE SAME AWS KEYS FROM JOB 1 HERE:
+          aws-access-key-id: "AKIAV2PPLCQHHOMDHYTB"
+          aws-secret-access-key: "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"
 
       - name: Refresh Auto Scaling Group
         run: |
           echo "Starting Instance Refresh for k3s-asg..."
-          # This tells AWS to replace old instances with new ones (which pull the new Docker images on boot)
           aws autoscaling start-instance-refresh \
             --auto-scaling-group-name k3s-asg \
             --preferences '{"MinHealthyPercentage": 50, "InstanceWarmup": 120}' \
+            --strategy Rolling
