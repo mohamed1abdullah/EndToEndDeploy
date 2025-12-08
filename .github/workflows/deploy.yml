@@ -31,7 +31,7 @@ jobs:
           context: ./application/backend
           file: ./application/backend/Dockerfile
           push: true
-          tags: tariq126/backend-login:latest
+          tags: mohamed010/backend-login:latest
 
       # Build Frontend -> Matches image in k8s/frontend/deploy.yml
       # CORRECTION: Changed mohamed010 -> tariq126
@@ -41,7 +41,7 @@ jobs:
           context: ./application/frontend
           file: ./application/frontend/Dockerfile
           push: true
-          tags: tariq126/frontend-login:latest
+          tags: mohamed010/frontend-login:latest
 
   # --- JOB 2: DEPLOY INFRASTRUCTURE (TERRAFORM) ---
   terraform-deploy:

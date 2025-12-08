@@ -13,7 +13,7 @@ spec:
     spec:
       containers:
       - name: backend
-        image: tariq126/backend-login
+        image: mohamed010/backend-login
         imagePullPolicy: Always
         ports:
         - containerPort: 3001
