@@ -33,3 +33,16 @@ variable "fe_eip_allocation_id" {
 variable "be_eip_allocation_id" {
     default = "eipalloc-0384517a51d6a6a18"
 }
+
+# --- SENSITIVE VARIABLES FOR GITHUB ACTIONS ---
+variable "aws_access_key" {
+  description = "AWS Access Key ID"
+  type        = string
+  sensitive   = true
+}
+
+variable "aws_secret_key" {
+  description = "AWS Secret Access Key"
+  type        = string
+  sensitive   = true
+}

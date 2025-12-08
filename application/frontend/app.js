@@ -1,8 +1,8 @@
 document.addEventListener('DOMContentLoaded', () => {
 
     // --- CONFIG ---
-    // const API_BASE_URL = "http://backend.be-ns.svc.cluster.local:3001";
-    const API_BASE_URL = "http://3.89.194.167:80";
+   // Use an empty string. The browser will use the current domain automatically.
+    const API_BASE_URL = "";
 
     // --- STATE ---
     let appState = {

@@ -1,11 +1,16 @@
-name: CI/CD - Build, Push, and Deploy to EC2
+name: CI/CD - Build & Terraform Deploy
 
 on:
   push:
-    branches: [ "test" ]
+    branches: [ "test", "main" ]
+
+env:
+  # Map GitHub Secrets to Terraform Variables (TF_VAR_name)
+  TF_VAR_aws_access_key: ${{ secrets.AWS_ACCESS_KEY_ID }}
+  TF_VAR_aws_secret_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
 
 jobs:
-  # --- JOB 1: BUILD & PUSH ---
+  # --- JOB 1: BUILD & PUSH DOCKER IMAGES ---
   build-and-push:
     runs-on: ubuntu-latest
     steps:
@@ -18,70 +23,51 @@ jobs:
           username: ${{ secrets.DOCKER_NAME }}
           password: ${{ secrets.DOCKER_TOKEN }}
 
-      # BACKEND (Path: application/backend)
+      # Build Backend -> Matches image in k8s/backend/deploy.yml
+      # CORRECTION: Changed mohamed010 -> tariq126 to match your Docker Hub
       - name: Build and Push Backend
         uses: docker/build-push-action@v5
         with:
           context: ./application/backend
           file: ./application/backend/Dockerfile
           push: true
-          tags: mohamed010/restaurant-backend:latest
+          tags: tariq126/backend-login:latest
 
-      # FRONTEND (Path: application/frontend)
+      # Build Frontend -> Matches image in k8s/frontend/deploy.yml
+      # CORRECTION: Changed mohamed010 -> tariq126
       - name: Build and Push Frontend
         uses: docker/build-push-action@v5
         with:
           context: ./application/frontend
           file: ./application/frontend/Dockerfile
           push: true
-          tags: mohamed010/restaurant-frontend:latest
+          tags: tariq126/frontend-login:latest
 
-  # --- JOB 2: DEPLOY TO EC2 ---
-  deploy:
+  # --- JOB 2: DEPLOY INFRASTRUCTURE (TERRAFORM) ---
+  terraform-deploy:
     needs: build-and-push
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./application/terrafrom
+
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      # STEP 1: Copy the Kubernetes dir to the server
-      - name: Copy K8s file to EC2
-        uses: appleboy/scp-action@v0.1.7
-        with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ${{ secrets.EC2_USER }}
-          key: ${{ secrets.EC2_SSH_KEY }}
-          source: "application/k8s"
-          target: "~/app"
-          strip_components: 1
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
 
-      # STEP 2: Copy the monitoring dir to the server
-      - name: Copy Monitoring dir to EC2
-        uses: appleboy/scp-action@v0.1.7
-        with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ${{ secrets.EC2_USER }}
-          key: ${{ secrets.EC2_SSH_KEY }}
-          source: "application/monitoring"
-          target: "~/app"
-          strip_components: 1
+      - name: Terraform Init
+        run: terraform init
 
-      # STEP 3: Apply changes on the server
-      - name: Deploy via SSH
-        uses: appleboy/ssh-action@v1.0.3
+      - name: Terraform Apply
+        # -auto-approve: Don't ask for confirmation
+        # The variables are injected automatically via env: TF_VAR_...
+        run: terraform apply -auto-approve
+
+      - name: Upload SSH Key
+        uses: actions/upload-artifact@v4
         with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ${{ secrets.EC2_USER }}
-          key: ${{ secrets.EC2_SSH_KEY }}
-          script: |
-            # Apply the file we just copied
-            sudo k3s kubectl apply -f ~/app/k8s/frontend
-            sudo k3s kubectl apply -f ~/app/k8s/backend
-            sudo k3s kubectl apply -f ~/app/k8s/db
-            
-            # Restart deployments to pull new images
-            sudo k3s kubectl rollout restart deployment/backend
-            sudo k3s kubectl rollout restart deployment/frontend
-            
-            # Create monitoring
-            sudo docker compose -f ~/app/monitoring/docker-compose.yml up -d
+          name: ssh-key
+          path: application/terrafrom/ssh-key.pem

@@ -3,11 +3,10 @@ kind: Service
 metadata:
   name: backend-service
 spec:
-  type: NodePort
+  type: ClusterIP  # Changed from NodePort to ClusterIP (Internal Only)
   selector:
     app: backend
   ports:
     - protocol: TCP
       port: 3001
       targetPort: 3001
-      nodePort: 30001

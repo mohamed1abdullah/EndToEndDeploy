@@ -4,5 +4,7 @@ resource "aws_eip" "nat_eip" {
 
 resource "aws_nat_gateway" "nat" {
   allocation_id = aws_eip.nat_eip.id
-  subnet_id     = aws_subnet.subnet2.id
+  subnet_id     = aws_subnet.public_1.id # Placed in Public Subnet 1
+
+  tags = { Name = "main-nat-gw" }
 }

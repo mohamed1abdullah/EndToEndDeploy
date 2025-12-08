@@ -13,9 +13,9 @@ spec:
     spec:
       containers:
       - name: frontend
-        image: mohamed010/frontend-login
+        image: tariq126/frontend-login
         imagePullPolicy: Always
         securityContext:
           runAsUser: 0
         ports:
-        - containerPort: 8080
+        - containerPort: 80

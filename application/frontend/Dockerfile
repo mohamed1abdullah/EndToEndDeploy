@@ -1,9 +1,12 @@
 FROM nginx:alpine
 
-# Run as root (default in this image)
+# Run as root
 USER root
 
-# Copy your frontend files
+# Copy the custom Nginx config
+COPY default.conf /etc/nginx/conf.d/default.conf
+
+# Copy the frontend app files
 COPY . /usr/share/nginx/html
 
 EXPOSE 80
