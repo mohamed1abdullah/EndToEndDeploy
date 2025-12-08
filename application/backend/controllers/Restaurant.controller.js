@@ -36,7 +36,7 @@ const addRestaurant = async (req, res) => {
     const restaurant = await Restaurant.create(req.body);
 
     const payload = { user: { id: restaurant.id } };
-    const token = jwt.sign(payload, 'your-jwt-secret', { expiresIn: 3600 });
+    const token = jwt.sign(payload, process.env.JWT_SECRET || 'your-jwt-secret', { expiresIn: 3600 });
 
     res.status(201).json({ token, restaurant });
   } catch (err) {
@@ -79,7 +79,7 @@ const login = async (req, res) => {
     if (!isMatch) return res.status(400).json({ message: "Invalid email or password" });
 
     const payload = { user: { id: restaurant.id } };
-    const token = jwt.sign(payload, 'your-jwt-secret', { expiresIn: 3600 });
+    const token = jwt.sign(payload, process.env.JWT_SECRET || 'your-jwt-secret', { expiresIn: 3600 });
 
     res.json({
       message: "Login successful",

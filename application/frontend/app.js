@@ -1,8 +1,7 @@
 document.addEventListener('DOMContentLoaded', () => {
 
     // --- CONFIG ---
-    // const API_BASE_URL = "http://backend.be-ns.svc.cluster.local:3001";
-    const API_BASE_URL = "http://3.89.194.167:80";
+    const API_BASE_URL = "__API_URL_PLACEHOLDER__";
 
     // --- STATE ---
     let appState = {
@@ -31,7 +30,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const registerForm = document.getElementById('register-form');
     const managementForm = document.getElementById('management-form');
 
-    // ... (all other form input selectors remain the same) ...
     // Form Inputs: Register
     const regName = document.getElementById('reg-name');
     const regEmail = document.getElementById('reg-email');
@@ -65,33 +63,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- FUNCTIONS ---
 
-    /**
-     * Shows the loading spinner
-     */
     function showLoader() {
         if (loadingOverlay) loadingOverlay.style.display = 'flex';
     }
 
-    /**
-     * Hides the loading spinner
-     */
     function hideLoader() {
         if (loadingOverlay) loadingOverlay.style.display = 'none';
     }
 
-    /**
-     * Hides all pages and shows the specified one with a fade animation
-     * @param {HTMLElement} pageToShow The page element to display
-     */
     function showPage(pageToShow) {
         if (appState.currentPage === pageToShow) return;
-
-        // Hide the current page
         if (appState.currentPage) {
             appState.currentPage.classList.remove('page-active');
         }
-
-        // Show the new page
         if (pageToShow) {
             pageToShow.classList.add('page-active');
             appState.currentPage = pageToShow;
@@ -100,13 +84,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    /**
-     * Updates the navigation bar based on auth state
-     */
     function updateNavbar() {
-        navLinks.innerHTML = ''; // Clear existing links
+        navLinks.innerHTML = '';
         
-        // Always show "All Restaurants"
         const allRestaurantsLink = document.createElement('a');
         allRestaurantsLink.href = '#';
         allRestaurantsLink.textContent = 'All Restaurants';
@@ -115,7 +95,6 @@ document.addEventListener('DOMContentLoaded', () => {
         navLinks.appendChild(allRestaurantsLink);
 
         if (appState.token) {
-            // Logged In
             const nameSpan = document.createElement('span');
             nameSpan.textContent = `Welcome, ${appState.name}`;
             navLinks.appendChild(nameSpan);
@@ -134,7 +113,6 @@ document.addEventListener('DOMContentLoaded', () => {
             navLinks.appendChild(logoutBtn);
 
         } else {
-            // Logged Out
             const loginLink = document.createElement('a');
             loginLink.href = '#';
             loginLink.textContent = 'Login';
@@ -150,10 +128,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    /**
-     * Updates the local appState object and saves to localStorage
-     * @param {object} newState - The new state properties to merge
-     */
     function setAppState(newState) {
         appState = { ...appState, ...newState };
         if (newState.token) localStorage.setItem('token', newState.token);
@@ -166,23 +140,14 @@ document.addEventListener('DOMContentLoaded', () => {
             localStorage.removeItem('name');
             appState = { ...appState, token: null, restaurantId: null, name: null };
         }
-        
         updateNavbar();
     }
     
-    /**
-     * Shows a toast notification with animations
-     * @param {string} message - The message to display
-     * @param {'success' | 'error'} type - The type of toast
-     */
     function showToast(message, type = 'success') {
         const toast = document.createElement('div');
         toast.className = `toast toast-${type}`;
         toast.textContent = message;
-        
         toastContainer.appendChild(toast);
-        
-        // Wait 3 seconds, then add the fade-out class, then remove after animation
         setTimeout(() => {
             toast.classList.add('toast-out');
             toast.addEventListener('animationend', () => {
@@ -191,10 +156,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }, 3000);
     }
 
-    /**
-     * Fetches and displays all restaurants
-     * Implements: GET /restaurants
-     */
     async function loadAllRestaurants() {
         showLoader();
         try {
@@ -203,7 +164,7 @@ document.addEventListener('DOMContentLoaded', () => {
             
             const restaurants = await res.json();
             
-            restaurantListContainer.innerHTML = ''; // Clear list
+            restaurantListContainer.innerHTML = '';
             if (restaurants.length === 0) {
                 restaurantListContainer.innerHTML = '<p>No restaurants found.</p>';
                 return;
@@ -229,10 +190,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
     
-    /**
-     * Fetches the current user's profile data and populates the management form
-     * Implements: GET /restaurants/:restaurantId
-     */
     async function loadProfileData() {
         if (!appState.restaurantId) return;
 
@@ -242,15 +199,13 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!res.ok) throw new Error('Could not fetch profile data');
 
             const data = await res.json();
-            
-            // Populate the form
             welcomeMessage.textContent = `Manage Your Profile, ${data.Name}`;
             mgmtName.value = data.Name;
             mgmtEmail.value = data.Email;
             mgmtLocation.value = data.Location;
             mgmtPhone.value = data.Phone;
             mgmtCommercial.value = data.Commercial_Num;
-            mgmtPassword.value = ''; // Clear password field
+            mgmtPassword.value = '';
 
         } catch (err) {
             showToast(err.message, 'error');
@@ -259,17 +214,10 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-
     // --- EVENT HANDLERS ---
-
-    /**
-     * Handles the login form submission
-     * Implements: POST /restaurants/login
-     */
     async function handleLogin(e) {
         e.preventDefault();
         showLoader();
-        
         const body = {
             email: loginEmail.value,
             password: loginPassword.value
@@ -292,7 +240,7 @@ document.addEventListener('DOMContentLoaded', () => {
             });
             
             showPage(managementPage);
-            await loadProfileData(); // Load data into the management form
+            await loadProfileData();
 
         } catch (err) {
             showToast(err.message, 'error');
@@ -301,14 +249,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    /**
-     * Handles the registration form submission
-     * Implements: POST /restaurants
-     */
     async function handleRegister(e) {
         e.preventDefault();
         showLoader();
-        
         const body = {
             Name: regName.value,
             Email: regEmail.value,
@@ -331,7 +274,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 throw new Error(data.message || 'Registration failed');
             }
 
-            // Registration was successful, log the user in
             setAppState({
                 token: data.token,
                 restaurantId: data.restaurant._id,
@@ -348,10 +290,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    /**
-     * Handles the profile update form submission
-     * Implements: PATCH /restaurants/:restaurantId
-     */
     async function handleUpdateProfile(e) {
         e.preventDefault();
         showLoader();
@@ -397,10 +335,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    /**
-     * Handles the delete account button click
-     * Implements: DELETE /restaurants/:restaurantId
-     */
     async function handleDeleteAccount() {
         if (!confirm('Are you sure you want to delete your account? This action is permanent and cannot be undone.')) {
             return;
@@ -419,7 +353,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!res.ok) throw new Error(data.message || 'Failed to delete account');
 
             showToast('Account deleted successfully.', 'success');
-            handleLogout(); // Log out and go to login page
+            handleLogout();
 
         } catch (err) {
             showToast(err.message, 'error');
@@ -428,9 +362,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
     
-    /**
-     * Handles logout button click
-     */
     function handleLogout() {
         setAppState({ token: null });
         showPage(loginPage);
@@ -438,15 +369,11 @@ document.addEventListener('DOMContentLoaded', () => {
         registerForm.reset();
     }
 
-
     // --- EVENT LISTENERS ---
-    
-    // Form Submissions
     loginForm.addEventListener('submit', handleLogin);
     registerForm.addEventListener('submit', handleRegister);
     managementForm.addEventListener('submit', handleUpdateProfile);
     
-    // Page Navigation (Static Links)
     showRegisterLink.addEventListener('click', (e) => {
         e.preventDefault();
         showPage(registerPage);
@@ -456,20 +383,13 @@ document.addEventListener('DOMContentLoaded', () => {
         showPage(loginPage);
     });
     
-    // Page Navigation (Dynamic Links in Navbar)
     navLinks.addEventListener('click', (e) => {
         e.preventDefault();
         const targetId = e.target.id;
         
-        if (targetId === 'nav-logout-btn') {
-            handleLogout();
-        }
-        if (targetId === 'nav-login-link') {
-            showPage(loginPage);
-        }
-        if (targetId === 'nav-register-btn') {
-            showPage(registerPage);
-        }
+        if (targetId === 'nav-logout-btn') handleLogout();
+        if (targetId === 'nav-login-link') showPage(loginPage);
+        if (targetId === 'nav-register-btn') showPage(registerPage);
         if (targetId === 'nav-all-restaurants') {
             showPage(allRestaurantsPage);
             loadAllRestaurants();
@@ -480,7 +400,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
     
-    // Other Buttons
     deleteAccountBtn.addEventListener('click', handleDeleteAccount);
 
     // --- INITIALIZATION ---
@@ -493,7 +412,5 @@ document.addEventListener('DOMContentLoaded', () => {
             showPage(loginPage);
         }
     }
-
     init();
-
 });

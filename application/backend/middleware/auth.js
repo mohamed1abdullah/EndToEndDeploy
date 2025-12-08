@@ -23,7 +23,7 @@ module.exports = function (req, res, next) {
 
   // 4. Verify the extracted token
   try {
-    const decoded = jwt.verify(token, 'your-jwt-secret'); // Use the same secret key
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-jwt-secret'); 
     req.user = decoded.user;
     console.log(`[LOG] Token verified for user ID: ${req.user.id}`);
     next();

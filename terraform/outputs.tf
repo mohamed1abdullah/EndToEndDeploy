@@ -1,5 +1,5 @@
 output "application_url" {
-  description = "Access your application here"
+  description = "Access your application here (Load Balancer URL)"
   value       = "http://${aws_lb.app_lb.dns_name}"
 }
 

@@ -1,4 +1,4 @@
-# --- Application Load Balancer (Reliability & Scalability) ---
+# --- Application Load Balancer ---
 resource "aws_lb" "app_lb" {
   name               = "restaurant-app-lb"
   internal           = false
@@ -8,10 +8,9 @@ resource "aws_lb" "app_lb" {
 }
 
 # --- Target Groups ---
-# 1. Frontend Target Group
 resource "aws_lb_target_group" "frontend_tg" {
   name     = "frontend-tg"
-  port     = 30081        # Must match NodePort in frontend/service.yml
+  port     = 30081
   protocol = "HTTP"
   vpc_id   = aws_vpc.main.id
   target_type = "instance"
@@ -19,13 +18,16 @@ resource "aws_lb_target_group" "frontend_tg" {
   health_check {
     path = "/"
     port = 30081
+    interval = 10
+    timeout  = 5
+    healthy_threshold = 2
+    unhealthy_threshold = 2
   }
 }
 
-# 2. Backend Target Group
 resource "aws_lb_target_group" "backend_tg" {
   name     = "backend-tg"
-  port     = 30001        # Must match NodePort in backend/service.yml
+  port     = 30001
   protocol = "HTTP"
   vpc_id   = aws_vpc.main.id
   target_type = "instance"
@@ -33,10 +35,14 @@ resource "aws_lb_target_group" "backend_tg" {
   health_check {
     path = "/restaurants"
     port = 30001
+    interval = 10
+    timeout  = 5
+    healthy_threshold = 2
+    unhealthy_threshold = 2
   }
 }
 
-# --- Listener & Routing Rules ---
+# --- Listeners ---
 resource "aws_lb_listener" "http" {
   load_balancer_arn = aws_lb.app_lb.arn
   port              = "80"
@@ -64,48 +70,99 @@ resource "aws_lb_listener_rule" "backend_rule" {
   }
 }
 
-# --- EC2 Instance (K3s Node) ---
-# Using a single larger instance for Control+Worker to simplify the "EndToEnd"
-# For true production scalability, use an Auto Scaling Group here.
-resource "aws_instance" "k3s_node" {
-  ami                  = "ami-0ecb62995f68bb549" # Ubuntu 20.04/22.04 US-East-1
-  instance_type        = "t3.medium"
-  subnet_id            = aws_subnet.private_1a.id # Secure in Private Subnet
-  iam_instance_profile = aws_iam_instance_profile.app_profile.name
-  vpc_security_group_ids = [aws_security_group.k8s_sg.id]
-  key_name             = "ssh-key" # Ensure you have this key created or use aws_key_pair resource
+# --- SSH Key Pair ---
+resource "aws_key_pair" "ssh_key_pair" {
+  key_name   = "deploy-key"
+  public_key = var.ssh_public_key
+}
 
-  user_data = <<-EOF
+# --- Launch Template (The Blueprint) ---
+resource "aws_launch_template" "k3s_template" {
+  name_prefix   = "k3s-node-"
+  image_id      = var.ami
+  instance_type = var.instance_type_t2_medium
+
+  # Security & Permissions
+  vpc_security_group_ids = [aws_security_group.k8s_sg.id]
+  iam_instance_profile {
+    name = aws_iam_instance_profile.app_profile.name
+  }
+  key_name = aws_key_pair.ssh_key_pair.key_name
+
+  # --- AUTOMATED STARTUP SCRIPT ---
+  user_data = base64encode(<<-EOF
               #!/bin/bash
-              # 1. Install K3s (Lightweight Kubernetes)
+              
+              # 1. Update and Install Prerequisites
+              apt-get update
+              apt-get install -y git curl
+
+              # 2. Install K3s (Lightweight Kubernetes)
               curl -sfL https://get.k3s.io | sh -
               
-              # 2. Install Git & Docker (Optional if using Containerd)
-              apt-get update && apt-get install -y git
+              # 3. Wait for K3s to be ready (Loop until active)
+              echo "Waiting for K3s to start..."
+              while ! systemctl is-active --quiet k3s; do
+                  sleep 5
+              done
+              echo "K3s is ready!"
 
-              # 3. Clone your Repo (Simulated)
-              # In a real scenario, use a Personal Access Token or Public Repo
-              # git clone https://github.com/tariq126/project-backend.git /app
+              # 4. Clone Your Application Code
+              # We clone to /home/ubuntu/app so it persists
+              mkdir -p /home/ubuntu/app
+              cd /home/ubuntu/app
+              git clone https://github.com/mohamed1abdullah/EndToEndDeploy.git .
               
-              # 4. Wait for Node to be ready
-              sleep 30
+              # 5. Apply Kubernetes Manifests
+              # This commands forces the new server to deploy your app immediately
               
-              # NOTE: You must SSH into this node (via Bastion) 
-              # or use a CI/CD pipeline to apply the kubectl manifests.
+              # Apply Backend (Secrets, Deployment, Service)
+              sudo k3s kubectl apply -f application/k8s/backend/
+              
+              # Apply Frontend (Deployment, Service)
+              sudo k3s kubectl apply -f application/k8s/frontend/
+              
+              # 6. Success Flag
+              echo "Deployment Complete!" > /var/log/deployment_status.txt
               EOF
+  )
 
-  tags = { Name = "k3s-cluster" }
+  tag_specifications {
+    resource_type = "instance"
+    tags = {
+      Name = "k3s-cluster-node"
+    }
+  }
 }
 
-# Register the EC2 instance to BOTH Target Groups
-resource "aws_lb_target_group_attachment" "attach_fe" {
-  target_group_arn = aws_lb_target_group.frontend_tg.arn
-  target_id        = aws_instance.k3s_node.id
-  port             = 30081
-}
+# --- Auto Scaling Group (The Manager) ---
+resource "aws_autoscaling_group" "k3s_asg" {
+  name                = "k3s-asg"
+  vpc_zone_identifier = [aws_subnet.private_1a.id, aws_subnet.private_1b.id]
+  
+  # Redundancy Settings
+  desired_capacity    = 2  # Keep 2 running always
+  min_size            = 2  # Never drop below 2
+  max_size            = 3  # Allow burst up to 3
 
-resource "aws_lb_target_group_attachment" "attach_be" {
-  target_group_arn = aws_lb_target_group.backend_tg.arn
-  target_id        = aws_instance.k3s_node.id
-  port             = 30001
+  # Use the template above
+  launch_template {
+    id      = aws_launch_template.k3s_template.id
+    version = "$Latest"
+  }
+
+  # Automatically register new instances to the Load Balancer
+  target_group_arns = [
+    aws_lb_target_group.frontend_tg.arn,
+    aws_lb_target_group.backend_tg.arn
+  ]
+
+  health_check_type         = "ELB"
+  health_check_grace_period = 300
+
+  tag {
+    key                 = "Name"
+    value               = "k3s-auto-scaled"
+    propagate_at_launch = true
+  }
 }
