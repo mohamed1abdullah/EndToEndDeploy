@@ -1,12 +1,41 @@
-name: CI/CD - Build, Push, and Deploy to EC2
+name: CI/CD - Build and Refresh ASG
 
 on:
   push:
-    branches: [ "test" ]
+    branches: [ "main", "feature/infrastructure-update" ] # Trigger on your branches
+
+permissions:
+  id-token: write
+  contents: read
 
 jobs:
-  # --- JOB 1: BUILD & PUSH ---
+  # --- JOB 1: GET CONFIGURATION ---
+  get-config:
+    runs-on: ubuntu-latest
+    outputs:
+      alb_url: ${{ steps.get_alb.outputs.dns }}
+    steps:
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Get Load Balancer URL
+        id: get_alb
+        run: |
+          # Fetch the DNS name of the Load Balancer named 'restaurant-app-lb'
+          ALB_DNS=$(aws elbv2 describe-load-balancers \
+            --names restaurant-app-lb \
+            --query "LoadBalancers[0].DNSName" \
+            --output text)
+          echo "Found ALB: $ALB_DNS"
+          echo "dns=http://$ALB_DNS" >> $GITHUB_OUTPUT
+
+  # --- JOB 2: BUILD & PUSH ---
   build-and-push:
+    needs: get-config
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
@@ -15,73 +44,49 @@ jobs:
       - name: Log in to Docker Hub
         uses: docker/login-action@v3
         with:
-          username: ${{ secrets.DOCKER_NAME }}
-          password: ${{ secrets.DOCKER_TOKEN }}
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
 
-      # BACKEND (Path: application/backend)
+      # 1. Inject the Load Balancer URL into the Frontend Code
+      - name: Update Frontend API URL
+        run: |
+          echo "Injecting API URL: ${{ needs.get-config.outputs.alb_url }}"
+          sed -i "s|__API_URL_PLACEHOLDER__|${{ needs.get-config.outputs.alb_url }}|g" EndToEndDeploy/application/frontend/app.js
+
+      # 2. Build Backend
       - name: Build and Push Backend
         uses: docker/build-push-action@v5
         with:
-          context: ./application/backend
-          file: ./application/backend/Dockerfile
+          context: EndToEndDeploy/application/backend
+          file: EndToEndDeploy/application/backend/Dockerfile
           push: true
-          tags: mohamed010/restaurant-backend:latest
+          tags: ${{ secrets.DOCKER_USERNAME }}/restaurant-backend:latest
 
-      # FRONTEND (Path: application/frontend)
+      # 3. Build Frontend
       - name: Build and Push Frontend
         uses: docker/build-push-action@v5
         with:
-          context: ./application/frontend
-          file: ./application/frontend/Dockerfile
+          context: EndToEndDeploy/application/frontend
+          file: EndToEndDeploy/application/frontend/Dockerfile
           push: true
-          tags: mohamed010/restaurant-frontend:latest
+          tags: ${{ secrets.DOCKER_USERNAME }}/restaurant-frontend:latest
 
-  # --- JOB 2: DEPLOY TO EC2 ---
-  deploy:
+  # --- JOB 3: DEPLOY (INSTANCE REFRESH) ---
+  deploy-refresh:
     needs: build-and-push
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
-
-      # STEP 1: Copy the Kubernetes dir to the server
-      - name: Copy K8s file to EC2
-        uses: appleboy/scp-action@v0.1.7
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
         with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ${{ secrets.EC2_USER }}
-          key: ${{ secrets.EC2_SSH_KEY }}
-          source: "application/k8s"
-          target: "~/app"
-          strip_components: 1
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
 
-      # STEP 2: Copy the monitoring dir to the server
-      - name: Copy Monitoring dir to EC2
-        uses: appleboy/scp-action@v0.1.7
-        with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ${{ secrets.EC2_USER }}
-          key: ${{ secrets.EC2_SSH_KEY }}
-          source: "application/monitoring"
-          target: "~/app"
-          strip_components: 1
-
-      # STEP 3: Apply changes on the server
-      - name: Deploy via SSH
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ${{ secrets.EC2_USER }}
-          key: ${{ secrets.EC2_SSH_KEY }}
-          script: |
-            # Apply the file we just copied
-            sudo k3s kubectl apply -f ~/app/k8s/frontend
-            sudo k3s kubectl apply -f ~/app/k8s/backend
-            sudo k3s kubectl apply -f ~/app/k8s/db
-            
-            # Restart deployments to pull new images
-            sudo k3s kubectl rollout restart deployment/backend
-            sudo k3s kubectl rollout restart deployment/frontend
-            
-            # Create monitoring
-            sudo docker compose -f ~/app/monitoring/docker-compose.yml up -d
+      - name: Refresh Auto Scaling Group
+        run: |
+          echo "Starting Instance Refresh for k3s-asg..."
+          # This tells AWS to replace old instances with new ones (which pull the new Docker images on boot)
+          aws autoscaling start-instance-refresh \
+            --auto-scaling-group-name k3s-asg \
+            --preferences '{"MinHealthyPercentage": 50, "InstanceWarmup": 120}' \
