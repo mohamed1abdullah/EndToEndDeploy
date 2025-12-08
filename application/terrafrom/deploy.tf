@@ -52,9 +52,18 @@ resource "null_resource" "setup_master" {
       "sudo k3s kubectl rollout restart daemonset/frontend",
       "sudo k3s kubectl rollout restart daemonset/backend",
 
-      # Wait for pods to restart and apply the relative path fix
-      "sleep 30", 
-      "PODS=$(sudo k3s kubectl get pods -l app=frontend -o jsonpath='{.items[*].metadata.name}')",
+      # --- THE FIX: WAIT FOR ROLLOUT TO FINISH ---
+      # This command pauses until all pods are successfully updated and Running
+      "sudo k3s kubectl rollout status daemonset/frontend --timeout=180s",
+      "sudo k3s kubectl rollout status daemonset/backend --timeout=180s",
+
+      # Extra sleep just to be safe
+      "sleep 10", 
+
+      # Get only RUNNING pods (ignore any terminating ones)
+      "PODS=$(sudo k3s kubectl get pods -l app=frontend --field-selector=status.phase=Running -o jsonpath='{.items[*].metadata.name}')",
+      
+      # Apply the relative path fix
       "for POD in $PODS; do sudo k3s kubectl exec $POD -- sed -i 's|const API_BASE_URL = \".*\";|const API_BASE_URL = \"\";|g' /usr/share/nginx/html/app.js; done"
     ]
   }
