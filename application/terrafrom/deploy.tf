@@ -1,12 +1,16 @@
+# --- 0. Generate a Secure Token for the Cluster ---
+resource "random_password" "k3s_token" {
+  length  = 32
+  special = false
+}
+
 # --- 1. Setup Master Node ---
 resource "null_resource" "setup_master" {
-  # This ensures the script runs EVERY time you push code, 
-  # so it updates the app with the new Docker images.
+  # Runs on every push to update the app images
   triggers = {
     always_run = "${timestamp()}"
   }
 
-  # Connection via Gateway (Bastion)
   connection {
     type                = "ssh"
     user                = "ubuntu"
@@ -17,13 +21,13 @@ resource "null_resource" "setup_master" {
     bastion_private_key = tls_private_key.ssh_key.private_key_pem
   }
 
-  # 1. Upload the k8s folder
+  # Upload K8s Files
   provisioner "file" {
     source      = "${path.module}/../k8s"
     destination = "/home/ubuntu/k8s"
   }
 
-  # 2. Create the Secrets file directly
+  # Create Secrets
   provisioner "file" {
     destination = "/home/ubuntu/k8s/backend/secrets.yml"
     content     = <<-EOF
@@ -38,33 +42,98 @@ resource "null_resource" "setup_master" {
     EOF
   }
 
-  # 3. Install K3s, Deploy, and Restart Pods
+  # Install K3s (Master Mode), Monitoring & Deploy App
   provisioner "remote-exec" {
     inline = [
-      # Install K3s (Safe to run multiple times, acts as update/check)
-      "curl -sfL https://get.k3s.io | sh -",
+      # --- FIX: Install Docker & Node Exporter (Safe/Idempotent) ---
+      # 1. Install Docker if it's missing
+      "if ! command -v docker &> /dev/null; then sudo apt-get update && sudo apt-get install -y docker.io; sudo systemctl enable docker && sudo systemctl start docker; fi",
+
+      # 2. Run Node Exporter if it's not already running
+      "if ! sudo docker ps --format '{{.Names}}' | grep -q node-exporter; then sudo docker run -d --restart=always --name=node-exporter -p 9100:9100 -v '/:/host:ro,rslave' quay.io/prometheus/node-exporter:latest --path.rootfs=/host; fi",
+
+      # Install Master with the Pre-Shared Token
+      "curl -sfL https://get.k3s.io | K3S_TOKEN='${random_password.k3s_token.result}' sh -",
       "sleep 10",
 
-      # Apply K8s Manifests (Updates Service/Deployment definitions)
+      # Deploy Resources
       "sudo k3s kubectl apply -R -f /home/ubuntu/k8s/",
       
-      # Force Restart to Pull New Docker Images from Hub
+      # Restart Pods to pull new images
       "sudo k3s kubectl rollout restart daemonset/frontend",
       "sudo k3s kubectl rollout restart daemonset/backend",
 
-      # --- THE FIX: WAIT FOR ROLLOUT TO FINISH ---
-      # This command pauses until all pods are successfully updated and Running
+      # Wait for rollout
       "sudo k3s kubectl rollout status daemonset/frontend --timeout=180s",
       "sudo k3s kubectl rollout status daemonset/backend --timeout=180s",
-
-      # Extra sleep just to be safe
-      "sleep 10", 
-
-      # Get only RUNNING pods (ignore any terminating ones)
-      "PODS=$(sudo k3s kubectl get pods -l app=frontend --field-selector=status.phase=Running -o jsonpath='{.items[*].metadata.name}')",
       
-      # Apply the relative path fix
+      # Frontend Config Fix
+      "sleep 10",
+      "PODS=$(sudo k3s kubectl get pods -l app=frontend --field-selector=status.phase=Running -o jsonpath='{.items[*].metadata.name}')",
       "for POD in $PODS; do sudo k3s kubectl exec $POD -- sed -i 's|const API_BASE_URL = \".*\";|const API_BASE_URL = \"\";|g' /usr/share/nginx/html/app.js; done"
+    ]
+  }
+}
+
+# --- 2. Setup Worker 1 ---
+resource "null_resource" "setup_worker_1" {
+  # Wait for Master to be ready first
+  depends_on = [null_resource.setup_master]
+
+  # Only run if the instance ID changes (so we don't rejoin every time)
+  triggers = {
+    instance_id = aws_instance.worker_1.id
+  }
+
+  connection {
+    type                = "ssh"
+    user                = "ubuntu"
+    private_key         = tls_private_key.ssh_key.private_key_pem
+    host                = aws_instance.worker_1.private_ip
+    bastion_host        = aws_instance.gateway_proxy.public_ip
+    bastion_user        = "ubuntu"
+    bastion_private_key = tls_private_key.ssh_key.private_key_pem
+  }
+
+  # Install K3s (Agent Mode) - AUTOMATIC JOIN
+  provisioner "remote-exec" {
+    inline = [
+      # Install Docker & Node Exporter
+      "sudo apt-get update && sudo apt-get install -y docker.io",
+      "sudo systemctl enable docker && sudo systemctl start docker",
+      "sudo docker run -d --restart=always --name=node-exporter -p 9100:9100 -v '/:/host:ro,rslave' quay.io/prometheus/node-exporter:latest --path.rootfs=/host",
+
+      # Join Cluster using the SAME token we gave the Master
+      "curl -sfL https://get.k3s.io | K3S_URL=https://${aws_instance.control_plane.private_ip}:6443 K3S_TOKEN='${random_password.k3s_token.result}' sh -"
+    ]
+  }
+}
+
+# --- 3. Setup Worker 2 ---
+resource "null_resource" "setup_worker_2" {
+  depends_on = [null_resource.setup_master]
+
+  triggers = {
+    instance_id = aws_instance.worker_2.id
+  }
+
+  connection {
+    type                = "ssh"
+    user                = "ubuntu"
+    private_key         = tls_private_key.ssh_key.private_key_pem
+    host                = aws_instance.worker_2.private_ip
+    bastion_host        = aws_instance.gateway_proxy.public_ip
+    bastion_user        = "ubuntu"
+    bastion_private_key = tls_private_key.ssh_key.private_key_pem
+  }
+
+  provisioner "remote-exec" {
+    inline = [
+      "sudo apt-get update && sudo apt-get install -y docker.io",
+      "sudo systemctl enable docker && sudo systemctl start docker",
+      "sudo docker run -d --restart=always --name=node-exporter -p 9100:9100 -v '/:/host:ro,rslave' quay.io/prometheus/node-exporter:latest --path.rootfs=/host",
+
+      "curl -sfL https://get.k3s.io | K3S_URL=https://${aws_instance.control_plane.private_ip}:6443 K3S_TOKEN='${random_password.k3s_token.result}' sh -"
     ]
   }
 }

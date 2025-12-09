@@ -64,6 +64,7 @@ resource "aws_instance" "gateway_proxy" {
               mkdir -p /home/ubuntu/monitoring/prometheus
               cd /home/ubuntu/monitoring
 
+              # === NEW PROMETHEUS CONFIGURATION ===
               cat <<EOT > prometheus/prometheus.yml
               global:
                 scrape_interval: 5s
@@ -71,9 +72,17 @@ resource "aws_instance" "gateway_proxy" {
                 - job_name: "prometheus"
                   static_configs:
                     - targets: ["prometheus:9090"]
-                - job_name: "node-exporter"
+
+                - job_name: "all_nodes"
                   static_configs:
-                    - targets: ["node-exporter:9100"]
+                    - targets: [
+                        # Gateway Node Exporter (runs via docker-compose on this node)
+                        "node-exporter:9100", 
+                        # K8s Nodes (Master and Workers - will deploy Node Exporter via deploy.tf)
+                        "${aws_instance.control_plane.private_ip}:9100", 
+                        "${aws_instance.worker_1.private_ip}:9100",      
+                        "${aws_instance.worker_2.private_ip}:9100"       
+                      ]
               EOT
 
               cat <<EOT > docker-compose.yml
