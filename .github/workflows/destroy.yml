@@ -1,7 +1,7 @@
 name: Destroy Infrastructure
 
 on:
-  workflow_dispatch:  # This ensures it ONLY runs when you click the button
+  workflow_dispatch:
 
 jobs:
   terraform-destroy:
@@ -9,8 +9,8 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        # Point to the directory where your main.tf / deploy.tf files are
-        working-directory: EndToEndDeploy/application/terrafrom
+        # CORRECTED PATH: Removed "EndToEndDeploy/" prefix
+        working-directory: application/terrafrom
 
     steps:
       - name: Checkout Code
@@ -30,7 +30,6 @@ jobs:
         run: terraform init
 
       - name: Terraform Destroy
-        # We pass the secrets as variables because your variables.tf requires them
         run: |
           terraform destroy -auto-approve \
             -var="aws_access_key=${{ secrets.AWS_ACCESS_KEY_ID }}" \
